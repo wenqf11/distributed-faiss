@@ -33,17 +33,19 @@ class IVFPQ_cpu():
     def build_index(self):
 	    nt, d = self.xt.shape
 	    quantizer = faiss.IndexFlatL2(d)  # this remains the same
-	    index = faiss.IndexIVFPQ(quantizer, d, self.nlist, self.m, 8)
-	    index.train(self.xt)
-	    index.add(self.xb)
-	    index.nprobe = self.nprobe 
+	    self.index = faiss.IndexIVFPQ(quantizer, d, self.nlist, self.m, 8)
+	    self.index.train(self.xt)
+	    self.index.add(self.xb)
+	    self.index.nprobe = self.nprobe 
 	    print("finish building index")
 
     def search(self, query):
+        print("start searching")
         t0 = time.time()
-        D, I = index.search(query, 100)
+        D, I = self.index.search(query, 100)
         t1 = time.time()
         print("search uses  %.4f s" %(t1-t0))
+        return D.tolist()[0], I.tolist()[0]
 
 
 class IVFPQ_gpu():
@@ -83,6 +85,7 @@ class IVFPQ_gpu():
         D, I = self.index.search(query, 100)
         t1 = time.time()
         print("search uses  %.4f s" %(t1-t0))
+        return D.tolist()[0], I.tolist()[0]
 
 
 class IVFPQ_multiGpu():
@@ -140,5 +143,4 @@ class IVFPQ_multiGpu():
         D, I = index.search(query, 100)
         t1 = time.time()
         print("search uses  %.4f s" %(t1-t0))
-
-
+        return D.tolist()[0], I.tolist()[0]
