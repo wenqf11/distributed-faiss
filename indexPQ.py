@@ -53,7 +53,7 @@ class IVFPQ_gpu():
     nlist = 4096
     nprobe = 128 
 
-    def __init__(self, xt_path="/root/dataset/sift1m/sift_learn.fvecs", xb_path="/root/dataset/sift1m/sift_base.fvecs"):
+    def __init__(self, xt_path="/home/wenqingfu/project/faiss/sift1M/sift_learn.fvecs", xb_path="/home/wenqingfu/project/faiss/sift1M/sift_base.fvecs"):
         self.xt = self.fvecs_read(xt_path)
         self.xb = self.fvecs_read(xb_path)
         self.res = faiss.StandardGpuResources()
@@ -91,13 +91,17 @@ class IVFPQ_gpu():
 class IVFPQ_multiGpu():
     m = 8
     nlist = 4096
-    nprobe = 128 
+    nprobe = 128
+    db_start = 0
+    db_end = 100
 
-    def __init__(self, xt_path="/root/dataset/sift1m/sift_learn.fvecs", xb_path="/root/dataset/sift1m/sift_base.fvecs", ngpu=3):
-        self.xt = self.fvecs_read(xt_path)
-        self.xb = self.fvecs_read(xb_path)
+    def __init__(self, xt_path="/home/wenqingfu/sift1b/bigann_learn.bvecs", xb_path="/home/wenqingfu/sift1b/bigann_base.bvecs", ngpu=3):
+        self.xt = self.mmap_bvecs(xt_path)
+        self.xb = self.mmap_bvecs(xb_path)
+        self.xt = self.sanitize(self.xt[:1000000])
+        self.xb = self.sanitize(self.xb[self.db_start*1000*1000:self.db_end*1000*1000])
         self.gpu_resources = []
-        for i in range(ngpu):
+        for i in range(0,ngpu):
             res = faiss.StandardGpuResources()
             self.gpu_resources.append(res)
         self.vres = faiss.GpuResourcesVector()
@@ -106,7 +110,6 @@ class IVFPQ_multiGpu():
         for i in range(0, ngpu):
             self.vdev.push_back(i)
             self.vres.push_back(self.gpu_resources[i])
-
 
         self.co = faiss.GpuMultipleClonerOptions()
         self.co.useFloat16 = True 
@@ -122,25 +125,35 @@ class IVFPQ_multiGpu():
         return a.reshape(-1, d + 1)[:, 1:].copy()
 
     def fvecs_read(self, fname):
-    	return self.ivecs_read(fname).view('float32')
+        return self.ivecs_read(fname).view('float32')
+    
+    def mmap_bvecs(self, fname):
+        x = np.memmap(fname, dtype='uint8', mode='r')
+        d = x[:4].view('int32')[0]
+        return x.reshape(-1, d + 4)[:, 4:]
+
+    def sanitize(self, x):
+        """ convert array to a c-contiguous float array """
+        return np.ascontiguousarray(x.astype('float32'))
 
     def build_index(self):
         nt, d = self.xt.shape
         index = faiss.index_factory(d, "IVF4096,PQ64")
         self.index = faiss.index_cpu_to_gpu_multiple(self.vres, self.vdev, index, self.co)
         
-        index.train(self.xt)
-        index.add(self.xb)
+        self.index.train(self.xt)
+        self.index.add(self.xb)
         
         ps = faiss.GpuParameterSpace()
         ps.initialize(self.index)
-        ps.set_index_parameter(index, 'nprobe', self.nprobe)
+        ps.set_index_parameter(self.index, 'nprobe', self.nprobe)
 
         print("finish building index")
 
     def search(self, query):
         t0 = time.time()
-        D, I = index.search(query, 100)
+        D, I = self.index.search(query, 100)
         t1 = time.time()
         print("search uses  %.4f s" %(t1-t0))
-        return D.tolist()[0], I.tolist()[0]
+        #return D.tolist()[0], I.tolist()[0]
+        return D.tolist(), I.tolist()

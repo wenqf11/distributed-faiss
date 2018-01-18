@@ -14,9 +14,21 @@ def fvecs_read(fname):
     return ivecs_read(fname).view('float32')
 
 
+def mmap_bvecs(fname):
+    x = np.memmap(fname, dtype='uint8', mode='r')
+    d = x[:4].view('int32')[0]
+    return x.reshape(-1, d + 4)[:, 4:]
+
+
+def sanitize(x):
+    """ convert array to a c-contiguous float array """
+    return np.ascontiguousarray(x.astype('float32'))
+
+path = "/home/wenqingfu/sift1b/bigann"
 rpc = zerorpc.Client()
 rpc.connect("tcp://127.0.0.1:8282")
-xq = fvecs_read("/root/dataset/sift1m/sift_query.fvecs")
+xq = mmap_bvecs(path+"_query.bvecs")
+#xq = fvecs_read("/home/wenqingfu/project/faiss/sift1M/sift_query.fvecs")
 print(rpc.search(xq[0,:].tolist()))
 
 app = Sanic()
