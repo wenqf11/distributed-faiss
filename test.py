@@ -41,17 +41,16 @@ nq, d = xq.shape
 
 xq = xq.tolist()
 
-def call_rpc(addr):
-    rpc = zerorpc.Client(addr, heartbeat=None, timeout=30000)
-    #rpc.connect(addr)
-    return rpc.search(xq)
+def call_rpc(arg):
+    rpc = zerorpc.Client(arg[0], heartbeat=None, timeout=300000)
+    return rpc.search(xq, int(arg[1]))
 
 for lnprobe in range(10):
     nprobe = 1 << lnprobe
     #ps.set_index_parameter(index, 'nprobe', nprobe)
     t0 = time.time()
     pool = Pool(2)
-    result = pool.map(call_rpc, [("tcp://127.0.0.1:8281", nprobe), ("tcp://127.0.0.1:8282", nprobe)])
+    result = pool.map(call_rpc, [["tcp://127.0.0.1:8281", str(nprobe)], ["tcp://166.111.80.130:8281", str(nprobe)]])
     D, I = result[0]
     D2, I2 = result[1]
     #D, I = rpc.search(xq)
