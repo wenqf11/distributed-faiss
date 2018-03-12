@@ -24,16 +24,15 @@ def sanitize(x):
     """ convert array to a c-contiguous float array """
     return np.ascontiguousarray(x.astype('float32'))
 
-path = "/home/wenqingfu/sift1b/bigann"
+path = "/home/wenqingfu/data/sift1b/bigann"
 
-xq = mmap_bvecs(path+"_query.bvecs")
+#xq = mmap_bvecs(path+"_query.bvecs")
 #xq = fvecs_read("/home/wenqingfu/project/faiss/sift1M/sift_query.fvecs")
 
 dbsize = 100
-path = "/home/wenqingfu/sift1b/bigann"
 
 xq = mmap_bvecs(path+"_query.bvecs")
-gt = ivecs_read('/home/wenqingfu/sift1b/gnd/idx_%dM.ivecs' % dbsize)
+gt = ivecs_read('/home/wenqingfu/data/sift1b/gnd/idx_%dM.ivecs' % dbsize)
 
 xq = sanitize(xq)
 
@@ -50,7 +49,7 @@ for lnprobe in range(10):
     #ps.set_index_parameter(index, 'nprobe', nprobe)
     t0 = time.time()
     pool = Pool(2)
-    result = pool.map(call_rpc, [["tcp://127.0.0.1:8281", str(nprobe)], ["tcp://166.111.80.130:8281", str(nprobe)]])
+    result = pool.map(call_rpc, [["tcp://192.168.3.101:8281", str(nprobe)], ["tcp://166.111.80.130:8281", str(nprobe)]])
     D, I = result[0]
     D2, I2 = result[1]
     #D, I = rpc.search(xq)
