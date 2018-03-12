@@ -29,7 +29,7 @@ path = "/home/wenqingfu/sift1b/bigann"
 xq = mmap_bvecs(path+"_query.bvecs")
 #xq = fvecs_read("/home/wenqingfu/project/faiss/sift1M/sift_query.fvecs")
 
-dbsize = 2
+dbsize = 100
 path = "/home/wenqingfu/sift1b/bigann"
 
 xq = mmap_bvecs(path+"_query.bvecs")
@@ -42,8 +42,8 @@ nq, d = xq.shape
 xq = xq.tolist()
 
 def call_rpc(addr):
-    rpc = zerorpc.Client()
-    rpc.connect(addr)
+    rpc = zerorpc.Client(addr, heartbeat=None, timeout=30000)
+    #rpc.connect(addr)
     return rpc.search(xq)
 
 for lnprobe in range(10):
@@ -51,7 +51,7 @@ for lnprobe in range(10):
     #ps.set_index_parameter(index, 'nprobe', nprobe)
     t0 = time.time()
     pool = Pool(2)
-    result = pool.map(call_rpc, ["tcp://127.0.0.1:8281", "tcp://127.0.0.1:8282"])
+    result = pool.map(call_rpc, [("tcp://127.0.0.1:8281", nprobe), ("tcp://127.0.0.1:8282", nprobe)])
     D, I = result[0]
     D2, I2 = result[1]
     #D, I = rpc.search(xq)
@@ -60,7 +60,7 @@ for lnprobe in range(10):
 
     I = np.asarray(I, dtype=np.int32)
     I2 = np.asarray(I2, dtype=np.int32)
-    I2 = I2 + 1000000
+    I2 = I2 + 50000000
 
     print("nprobe=%4d %.3f s recalls=" % (nprobe, t1 - t0), end="")
     for rank in 1, 10, 100:

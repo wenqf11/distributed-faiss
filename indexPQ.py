@@ -13,6 +13,9 @@ import pdb
 from math import sqrt
 import faiss
 
+tempmem = -1
+#tempmem = (2048+1024+512)*1024*1024
+
 class IVFPQ_cpu():
     m = 8                   
     nlist = 4096
@@ -93,7 +96,7 @@ class IVFPQ_multiGpu():
     nlist = 4096
     nprobe = 128
     db_start = 0
-    db_end = 100
+    db_end = 50
 
     def __init__(self, xt_path="/home/wenqingfu/sift1b/bigann_learn.bvecs", xb_path="/home/wenqingfu/sift1b/bigann_base.bvecs", ngpu=3):
         self.xt = self.mmap_bvecs(xt_path)
@@ -103,6 +106,9 @@ class IVFPQ_multiGpu():
         self.gpu_resources = []
         for i in range(0,ngpu):
             res = faiss.StandardGpuResources()
+            if tempmem >= 0:
+                res.setTempMemory(tempmem)
+                print("set tempemm to %d" % tempmem)
             self.gpu_resources.append(res)
         self.vres = faiss.GpuResourcesVector()
         self.vdev = faiss.IntVector()
@@ -118,6 +124,8 @@ class IVFPQ_multiGpu():
         self.co.indicesOptions = 0
         self.co.verbose = True
         self.co.shard = True  
+
+        self.ps = faiss.GpuParameterSpace()
 
     def ivecs_read(self, fname):
         a = np.fromfile(fname, dtype='int32')
@@ -144,13 +152,13 @@ class IVFPQ_multiGpu():
         self.index.train(self.xt)
         self.index.add(self.xb)
         
-        ps = faiss.GpuParameterSpace()
-        ps.initialize(self.index)
-        ps.set_index_parameter(self.index, 'nprobe', self.nprobe)
+        self.ps.initialize(self.index)
+        self.ps.set_index_parameter(self.index, 'nprobe', self.nprobe)
 
         print("finish building index")
 
-    def search(self, query):
+    def search(self, query, nprobe):
+        self.ps.set_index_parameter(self.index, 'nprobe', nprobe)
         t0 = time.time()
         D, I = self.index.search(query, 100)
         t1 = time.time()

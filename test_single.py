@@ -22,8 +22,7 @@ def sanitize(x):
     return np.ascontiguousarray(x.astype('float32'))
 
 path = "/home/wenqingfu/sift1b/bigann"
-rpc = zerorpc.Client()
-rpc.connect("tcp://127.0.0.1:8282")
+rpc = zerorpc.Client("tcp://127.0.0.1:8282", timeout=1000000, heartbeat=None)
 
 xq = mmap_bvecs(path+"_query.bvecs")
 #xq = fvecs_read("/home/wenqingfu/project/faiss/sift1M/sift_query.fvecs")
@@ -40,9 +39,10 @@ nq, d = xq.shape
 
 for lnprobe in range(10):
     nprobe = 1 << lnprobe
+    nprobe = 512
     #ps.set_index_parameter(index, 'nprobe', nprobe)
     t0 = time.time()
-    D, I = rpc.search(xq.tolist())
+    D, I = rpc.search(xq.tolist(), nprobe)
     t1 = time.time()
     I = np.asarray(I, dtype=np.int32)
 
@@ -51,3 +51,4 @@ for lnprobe in range(10):
         n_ok = (I[:, :rank] == gt[:, :1]).sum()
         print("%.4f" % (n_ok / float(nq)),end=" ")
     print()
+    break
