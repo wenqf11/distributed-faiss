@@ -95,10 +95,10 @@ class IVFPQ_multiGpu():
     m = 8
     nlist = 4096
     nprobe = 128
-    db_start = 0
-    db_end = 50
+    db_start = 50
+    db_end = 100
 
-    def __init__(self, xt_path="/home/wenqingfu/sift1b/bigann_learn.bvecs", xb_path="/home/wenqingfu/sift1b/bigann_base.bvecs", ngpu=3):
+    def __init__(self, xt_path="/root/dataset/sift1b/bigann_learn.bvecs", xb_path="/root/dataset/sift1b/bigann_base.bvecs", ngpu=3):
         self.xt = self.mmap_bvecs(xt_path)
         self.xb = self.mmap_bvecs(xb_path)
         self.xt = self.sanitize(self.xt[:1000000])
