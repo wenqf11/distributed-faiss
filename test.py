@@ -41,28 +41,34 @@ nq, d = xq.shape
 xq = xq.tolist()
 
 def call_rpc(arg):
-    rpc = zerorpc.Client(arg[0], heartbeat=None, timeout=300000)
+    rpc = zerorpc.Client(arg[0], heartbeat=None, timeout=100)
     return rpc.search(xq, int(arg[1]))
 
 for lnprobe in range(10):
     nprobe = 1 << lnprobe
     #ps.set_index_parameter(index, 'nprobe', nprobe)
     t0 = time.time()
-    pool = Pool(2)
-    result = pool.map(call_rpc, [["tcp://192.168.3.101:8281", str(nprobe)], ["tcp://166.111.80.130:8281", str(nprobe)]])
+    pool = Pool(3)
+    result = pool.map(call_rpc, [
+        ["tcp://166.111.80.138:8281", str(nprobe)],
+        ["tcp://166.111.80.130:8281", str(nprobe)],
+        ["tcp://192.168.3.101:8281", str(nprobe)]
+    ])
+    t1 = time.time()
+    print("nprobe=%4d %.3f s recalls=" % (nprobe, t1 - t0), end="")
+    
     D, I = result[0]
     D2, I2 = result[1]
-    #D, I = rpc.search(xq)
-    #D2, I2 = rpc2.search(xq)
-    t1 = time.time()
-
+    D3, I3 = result[2]
     I = np.asarray(I, dtype=np.int32)
     I2 = np.asarray(I2, dtype=np.int32)
-    I2 = I2 + 50000000
+    I3 = np.asarray(I3, dtype=np.int32)
+    I2 = I2 + 33000000
+    I3 = I3 + 67000000
 
-    print("nprobe=%4d %.3f s recalls=" % (nprobe, t1 - t0), end="")
     for rank in 1, 10, 100:
         n_ok = (I[:, :rank] == gt[:, :1]).sum()
         n_ok = n_ok + (I2[:, :rank] == gt[:, :1]).sum()
+        n_ok = n_ok + (I3[:, :rank] == gt[:, :1]).sum()
         print("%.4f" % (n_ok / float(nq)),end=" ")
     print()

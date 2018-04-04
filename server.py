@@ -3,7 +3,7 @@ from indexPQ import *
 import numpy as np
 
 
-index = IVFPQ_multiGpu(ngpu=1)
+index = IVFPQ_multiGpu(ngpu=3)
 index.build_index()
 
 
